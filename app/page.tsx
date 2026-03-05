@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ArticleCard } from "@/components/ArticleCard";
 import { CardSkeleton } from "@/components/ui/card-skeleton";
+import { fetchTexts } from "@/lib/api";
 
 interface ArticlePreview {
   id: string;
@@ -10,14 +11,8 @@ interface ArticlePreview {
   createdAt: string;
 }
 
-interface FeedResponse {
-  items: ArticlePreview[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
 export default function Home() {
+  const pageSize = 20;
   const [items, setItems] = useState<ArticlePreview[]>([]);
   const [, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
@@ -31,21 +26,21 @@ export default function Home() {
     loadingRef.current = true;
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/articles/feed?page=${pageNum}&limit=20`);
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch feed");
-      }
-      const data: FeedResponse = await res.json();
+      const data = await fetchTexts(pageNum, pageSize);
+      const mappedItems: ArticlePreview[] = data.texts.map((text) => ({
+        id: String(text.id),
+        previewText: text.text,
+        createdAt: text.createdAt,
+      }));
 
       setItems((prev) => {
-        const newItems = data.items.filter(
+        const newItems = mappedItems.filter(
           (item) => !prev.some((p) => p.id === item.id)
         );
         return [...prev, ...newItems];
       });
 
-      setHasMore(data.items.length > 0);
+      setHasMore(pageNum * data.pagination.limit < data.pagination.total);
     } catch (error) {
       console.error("Error fetching feed:", error);
     } finally {
@@ -109,7 +104,7 @@ export default function Home() {
 
           {!hasMore && items.length > 0 && (
             <p className="text-center text-muted-foreground text-sm py-8">
-              No more articles to load.
+              No more texts to load.
             </p>
           )}
 

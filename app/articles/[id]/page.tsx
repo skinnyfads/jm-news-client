@@ -3,6 +3,7 @@ import { TokenProvider } from "@/components/TokenContext";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { analyzeText, fetchTextById } from "@/lib/api";
 
 interface Token {
     surface: string;
@@ -16,21 +17,32 @@ interface Token {
 interface Article {
     id: string;
     content: string;
+    language: string;
     tokens: Token[];
     createdAt?: string;
 }
 
 async function getArticle(id: string): Promise<Article | null> {
     try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/articles/${id}`, {
-            cache: "no-store",
-        });
-
-        if (!res.ok) {
+        const text = await fetchTextById(id);
+        if (!text) {
             return null;
         }
 
-        return res.json();
+        let tokens: Token[] = [];
+        try {
+            tokens = await analyzeText(text.language, text.text);
+        } catch (error) {
+            console.error("Failed to analyze text:", error);
+        }
+
+        return {
+            id: String(text.id),
+            content: text.text,
+            language: text.language,
+            tokens,
+            createdAt: text.createdAt,
+        };
     } catch (error) {
         console.error("Failed to fetch article:", error);
         return null;
@@ -67,9 +79,13 @@ export default async function ArticlePage({
                     <div className="prose prose-lg dark:prose-invert max-w-none leading-loose tracking-wide">
                         <div className="flex flex-wrap items-end content-start gap-y-2">
                             <TokenProvider>
-                                {article.tokens.map((token, index) => (
-                                    <TokenWord key={`${index}-${token.surface}`} token={token} index={`${index}`} />
-                                ))}
+                                {article.tokens.length > 0 ? (
+                                    article.tokens.map((token, index) => (
+                                        <TokenWord key={`${index}-${token.surface}`} token={token} index={`${index}`} />
+                                    ))
+                                ) : (
+                                    <span>{article.content}</span>
+                                )}
                             </TokenProvider>
                         </div>
                     </div>
