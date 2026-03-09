@@ -32,6 +32,11 @@ export interface ArticleToken {
   reading?: string;
 }
 
+export interface ArticleTokenKeyValue {
+  Key: string;
+  Value: string | number;
+}
+
 export interface ArticleDetailResponse {
   ID: string;
   PreviewText: string;
@@ -39,7 +44,7 @@ export interface ArticleDetailResponse {
   Language: string;
   Topic: string;
   Text: string;
-  Tokens: ArticleToken[];
+  Tokens: ArticleTokenKeyValue[][];
 }
 
 export interface AnalyzeToken {

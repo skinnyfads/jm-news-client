@@ -30,7 +30,7 @@ function buildFallbackTokens(content: string, language: string): AnalyzeToken[] 
             surface,
             dictForm: null,
             reading: null,
-            meanings: surface.trim().length > 0 ? ["No dictionary data returned for this token."] : [],
+            meanings: [],
             pos: [],
             reason: null,
         });
@@ -48,7 +48,14 @@ async function getTextDetail(id: string): Promise<TextDetail | null> {
 
         let tokens: AnalyzeToken[] = [];
         if (text.Tokens && text.Tokens.length > 0) {
-            tokens = normalizeAnalyzeTokens(text.Tokens);
+            const reconstructedTokens = text.Tokens.map((kvArray) => {
+                const tokenObj: Record<string, string | number> = {};
+                for (const kv of kvArray) {
+                    tokenObj[kv.Key] = kv.Value;
+                }
+                return tokenObj;
+            });
+            tokens = normalizeAnalyzeTokens(reconstructedTokens);
         }
 
         if (tokens.length === 0) {
