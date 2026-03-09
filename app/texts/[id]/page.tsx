@@ -3,7 +3,7 @@ import { TokenProvider } from "@/components/TokenContext";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AnalyzeToken, analyzeText, fetchTextById } from "@/lib/api";
+import { AnalyzeToken, normalizeAnalyzeTokens, fetchTextById } from "@/lib/api";
 
 interface TextDetail {
     id: string;
@@ -47,22 +47,20 @@ async function getTextDetail(id: string): Promise<TextDetail | null> {
         }
 
         let tokens: AnalyzeToken[] = [];
-        try {
-            tokens = await analyzeText(text.language, text.text);
-        } catch (error) {
-            console.error("Failed to analyze text:", error);
+        if (text.Tokens && text.Tokens.length > 0) {
+            tokens = normalizeAnalyzeTokens(text.Tokens);
         }
 
         if (tokens.length === 0) {
-            tokens = buildFallbackTokens(text.text, text.language);
+            tokens = buildFallbackTokens(text.Text, text.Language);
         }
 
         return {
-            id: String(text.id),
-            content: text.text,
-            language: text.language,
+            id: String(text.ID),
+            content: text.Text,
+            language: text.Language,
             tokens,
-            createdAt: text.createdAt,
+            createdAt: text.CreatedAt,
         };
     } catch (error) {
         console.error("Failed to fetch text:", error);

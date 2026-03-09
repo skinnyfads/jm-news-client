@@ -9,6 +9,7 @@ interface TextPreview {
   id: string;
   previewText: string;
   createdAt: string;
+  language: string;
 }
 
 export default function Home() {
@@ -27,9 +28,10 @@ export default function Home() {
     setLoading(true);
     try {
       const data = await fetchTexts(pageNum, pageSize);
-      const mappedItems: TextPreview[] = data.texts.map((text) => ({
+      const mappedItems: TextPreview[] = data.items.map((text) => ({
         id: String(text.id),
-        previewText: text.text,
+        previewText: text.previewText,
+        language: text.language,
         createdAt: text.createdAt,
       }));
 
@@ -40,7 +42,7 @@ export default function Home() {
         return [...prev, ...newItems];
       });
 
-      setHasMore(pageNum * data.pagination.limit < data.pagination.total);
+      setHasMore(pageNum * data.limit < data.total);
     } catch (error) {
       console.error("Error fetching feed:", error);
     } finally {

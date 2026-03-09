@@ -10,17 +10,36 @@ export interface TextRecord {
   updatedAt: string;
 }
 
-interface ListTextsResponse {
-  texts: TextRecord[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-  };
+export interface ArticleFeedItem {
+  id: string;
+  previewText: string;
+  language: string;
+  createdAt: string;
 }
 
-interface GetTextResponse {
-  text: TextRecord;
+export interface ListArticlesResponse {
+  items: ArticleFeedItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface ArticleToken {
+  sentence: number;
+  token: string;
+  dictionaryForm: string;
+  meaning: string;
+  reading?: string;
+}
+
+export interface ArticleDetailResponse {
+  ID: string;
+  PreviewText: string;
+  CreatedAt: string;
+  Language: string;
+  Topic: string;
+  Text: string;
+  Tokens: ArticleToken[];
 }
 
 export interface AnalyzeToken {
@@ -76,6 +95,7 @@ function normalizeToken(raw: unknown): AnalyzeToken | null {
     nestedToken?.reading;
   const meaningsValue =
     token.meanings ??
+    token.meaning ??
     token.englishMeaning ??
     token.gloss ??
     token.glosses ??
@@ -123,7 +143,7 @@ function collectPossibleTokenArrays(data: unknown): unknown[][] {
   return arrays;
 }
 
-function normalizeAnalyzeTokens(data: unknown): AnalyzeToken[] {
+export function normalizeAnalyzeTokens(data: unknown): AnalyzeToken[] {
   const possibleArrays = collectPossibleTokenArrays(data);
   const source =
     possibleArrays.find((arr) => arr.some((item) => normalizeToken(item) !== null)) ?? [];
@@ -133,8 +153,8 @@ function normalizeAnalyzeTokens(data: unknown): AnalyzeToken[] {
     .filter((token): token is AnalyzeToken => token !== null);
 }
 
-export async function fetchTexts(page: number, limit: number): Promise<ListTextsResponse> {
-  const res = await fetch(`${baseUrl}/texts?page=${page}&limit=${limit}`, {
+export async function fetchTexts(page: number, limit: number): Promise<ListArticlesResponse> {
+  const res = await fetch(`${baseUrl}/articles/feed?page=${page}&limit=${limit}`, {
     cache: "no-store",
   });
   if (!res.ok) {
@@ -143,31 +163,13 @@ export async function fetchTexts(page: number, limit: number): Promise<ListTexts
   return res.json();
 }
 
-export async function fetchTextById(id: string): Promise<TextRecord | null> {
-  const res = await fetch(`${baseUrl}/texts/${id}`, {
+export async function fetchTextById(id: string): Promise<ArticleDetailResponse | null> {
+  const res = await fetch(`${baseUrl}/articles/${id}`, {
     cache: "no-store",
   });
   if (!res.ok) {
     return null;
   }
-  const data: GetTextResponse = await res.json();
-  return data.text;
+  return res.json();
 }
 
-export async function analyzeText(language: string, text: string): Promise<AnalyzeToken[]> {
-  const res = await fetch(`${baseUrl}/analyze/${encodeURIComponent(language)}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ text }),
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    throw new Error("Failed to analyze text");
-  }
-
-  const data = await res.json();
-  return normalizeAnalyzeTokens(data);
-}
