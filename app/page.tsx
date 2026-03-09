@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ArticleCard } from "@/components/ArticleCard";
+import { TextCard } from "@/components/TextCard";
 import { CardSkeleton } from "@/components/ui/card-skeleton";
 import { fetchTexts } from "@/lib/api";
 
-interface ArticlePreview {
+interface TextPreview {
   id: string;
   previewText: string;
   createdAt: string;
@@ -13,7 +13,7 @@ interface ArticlePreview {
 
 export default function Home() {
   const pageSize = 20;
-  const [items, setItems] = useState<ArticlePreview[]>([]);
+  const [items, setItems] = useState<TextPreview[]>([]);
   const [, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -27,7 +27,7 @@ export default function Home() {
     setLoading(true);
     try {
       const data = await fetchTexts(pageNum, pageSize);
-      const mappedItems: ArticlePreview[] = data.texts.map((text) => ({
+      const mappedItems: TextPreview[] = data.texts.map((text) => ({
         id: String(text.id),
         previewText: text.text,
         createdAt: text.createdAt,
@@ -91,7 +91,7 @@ export default function Home() {
       <main className="container mx-auto max-w-2xl px-4 py-8">
         <div className="flex flex-col gap-6">
           {items.map((item) => (
-            <ArticleCard key={item.id} article={item} />
+            <TextCard key={item.id} textItem={item} />
           ))}
 
           {loading && (

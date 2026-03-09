@@ -1,6 +1,6 @@
 const DEFAULT_API_URL = "http://localhost:8080";
 
-const baseUrl = (process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_URL).replace(/\/+$/, "");
+const baseUrl = (process.env.NEXT_PUBLIC_TEXT_API_URL ?? DEFAULT_API_URL).replace(/\/+$/, "");
 
 export interface TextRecord {
   id: number;
@@ -23,7 +23,7 @@ interface GetTextResponse {
   text: TextRecord;
 }
 
-interface AnalyzeToken {
+export interface AnalyzeToken {
   surface: string;
   dictForm: string | null;
   reading: string | null;
@@ -46,15 +46,43 @@ function normalizeToken(raw: unknown): AnalyzeToken | null {
   if (!raw || typeof raw !== "object") return null;
 
   const token = raw as Record<string, unknown>;
-  const surfaceValue = token.surface ?? token.text ?? token.token;
+  const nestedToken =
+    token.vocabulary && typeof token.vocabulary === "object"
+      ? (token.vocabulary as Record<string, unknown>)
+      : null;
+
+  const surfaceValue =
+    token.surface ??
+    token.text ??
+    token.token ??
+    token.word ??
+    token.form;
   if (typeof surfaceValue !== "string" || surfaceValue.length === 0) {
     return null;
   }
 
-  const dictFormValue = token.dictForm ?? token.dictionaryForm ?? token.lemma ?? token.base;
-  const readingValue = token.reading ?? token.pronunciation;
-  const meaningsValue = token.meanings ?? token.englishMeaning;
-  const posValue = token.pos ?? token.partOfSpeech;
+  const dictFormValue =
+    token.dictForm ??
+    token.dictionaryForm ??
+    token.lemma ??
+    token.base ??
+    token.baseForm ??
+    nestedToken?.dictForm ??
+    nestedToken?.dictionaryForm;
+  const readingValue =
+    token.reading ??
+    token.pronunciation ??
+    token.kana ??
+    nestedToken?.reading;
+  const meaningsValue =
+    token.meanings ??
+    token.englishMeaning ??
+    token.gloss ??
+    token.glosses ??
+    token.definition ??
+    nestedToken?.meanings ??
+    nestedToken?.englishMeaning;
+  const posValue = token.pos ?? token.partOfSpeech ?? token.tag;
   const reasonValue = token.reason;
 
   return {
@@ -67,12 +95,38 @@ function normalizeToken(raw: unknown): AnalyzeToken | null {
   };
 }
 
+function collectPossibleTokenArrays(data: unknown): unknown[][] {
+  const arrays: unknown[][] = [];
+  const stack: unknown[] = [data];
+  const visited = new Set<object>();
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current) continue;
+
+    if (Array.isArray(current)) {
+      arrays.push(current);
+      for (const item of current) stack.push(item);
+      continue;
+    }
+
+    if (typeof current !== "object") continue;
+    if (visited.has(current)) continue;
+    visited.add(current);
+
+    const record = current as Record<string, unknown>;
+    for (const value of Object.values(record)) {
+      stack.push(value);
+    }
+  }
+
+  return arrays;
+}
+
 function normalizeAnalyzeTokens(data: unknown): AnalyzeToken[] {
+  const possibleArrays = collectPossibleTokenArrays(data);
   const source =
-    Array.isArray(data) ? data :
-      data && typeof data === "object" && Array.isArray((data as { tokens?: unknown }).tokens)
-        ? (data as { tokens: unknown[] }).tokens
-        : [];
+    possibleArrays.find((arr) => arr.some((item) => normalizeToken(item) !== null)) ?? [];
 
   return source
     .map(normalizeToken)
