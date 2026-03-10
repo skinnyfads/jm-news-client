@@ -1,20 +1,24 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { TextCard } from "@/components/TextCard";
+import { ArticleCard } from "@/components/ArticleCard";
 import { CardSkeleton } from "@/components/ui/card-skeleton";
-import { fetchTexts } from "@/lib/api";
 
-interface TextPreview {
+interface ArticlePreview {
   id: string;
   previewText: string;
   createdAt: string;
-  language: string;
+}
+
+interface FeedResponse {
+  items: ArticlePreview[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 export default function Home() {
-  const pageSize = 20;
-  const [items, setItems] = useState<TextPreview[]>([]);
+  const [items, setItems] = useState<ArticlePreview[]>([]);
   const [, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -27,22 +31,21 @@ export default function Home() {
     loadingRef.current = true;
     setLoading(true);
     try {
-      const data = await fetchTexts(pageNum, pageSize);
-      const mappedItems: TextPreview[] = data.items.map((text) => ({
-        id: String(text.id),
-        previewText: text.previewText,
-        language: text.language,
-        createdAt: text.createdAt,
-      }));
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/articles/feed?page=${pageNum}&limit=20`);
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch feed");
+      }
+      const data: FeedResponse = await res.json();
 
       setItems((prev) => {
-        const newItems = mappedItems.filter(
+        const newItems = data.items.filter(
           (item) => !prev.some((p) => p.id === item.id)
         );
         return [...prev, ...newItems];
       });
 
-      setHasMore(pageNum * data.limit < data.total);
+      setHasMore(data.items.length > 0);
     } catch (error) {
       console.error("Error fetching feed:", error);
     } finally {
@@ -93,7 +96,7 @@ export default function Home() {
       <main className="container mx-auto max-w-2xl px-4 py-8">
         <div className="flex flex-col gap-6">
           {items.map((item) => (
-            <TextCard key={item.id} textItem={item} />
+            <ArticleCard key={item.id} article={item} />
           ))}
 
           {loading && (
@@ -106,7 +109,7 @@ export default function Home() {
 
           {!hasMore && items.length > 0 && (
             <p className="text-center text-muted-foreground text-sm py-8">
-              No more texts to load.
+              No more articles to load.
             </p>
           )}
 

@@ -90,14 +90,7 @@ export function TokenWord({ token, index }: TokenWordProps) {
         updatePosition();
     }, [isOpen]);
 
-    const hasDetails =
-        Boolean(token.reading) ||
-        Boolean(token.dictForm) ||
-        token.meanings.length > 0 ||
-        token.pos.length > 0 ||
-        Boolean(token.reason);
-
-    if (token.surface.trim().length === 0) {
+    if (!token.reading && token.meanings.length === 0) {
         return <span>{token.surface}</span>;
     }
 
@@ -155,11 +148,6 @@ export function TokenWord({ token, index }: TokenWordProps) {
                                     </li>
                                 ))}
                             </ol>
-                            {!hasDetails && (
-                                <p className="text-xs text-muted-foreground">
-                                    No dictionary data available for this token.
-                                </p>
-                            )}
                         </div>
                     </div>
 
